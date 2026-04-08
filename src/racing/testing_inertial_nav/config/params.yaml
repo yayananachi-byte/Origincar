@@ -1,0 +1,31 @@
+# Inertial Navigation Controller Parameters
+# This file configures the multi-waypoint navigation behavior
+
+inertial_nav_controller:
+  ros__parameters:
+    # Navigation tolerances
+    position_tolerance: 0.05      # meters (5 cm) - distance to consider waypoint reached
+    angle_tolerance: 0.05         # radians (~2.86 degrees) - orientation tolerance
+    
+    # Speed limits
+    max_linear_speed: 0.5         # m/s - maximum forward/backward speed
+    max_angular_speed: 1.0        # rad/s - maximum rotation speed
+    
+    # Control loop frequency
+    control_frequency: 20.0       # Hz - control loop update rate
+    
+    # PID Controller - Linear Motion (distance control)
+    linear_kp: 0.8                # Proportional gain for distance
+    linear_ki: 0.0                # Integral gain for distance
+    linear_kd: 0.1                # Derivative gain for distance
+    
+    # PID Controller - Angular Motion (heading control)
+    angular_kp: 2.0               # Proportional gain for angle
+    angular_ki: 0.0               # Integral gain for angle
+    angular_kd: 0.3               # Derivative gain for angle
+    
+    # Note: Waypoints are defined in the C++ code
+    # Modify waypoints_ vector in inertial_nav_controller.cpp to change path
+    # Format: Waypoint(x, y, yaw) where:
+    #   x, y = relative position from origin (meters)
+    #   yaw = target orientation at waypoint (radians, optional)

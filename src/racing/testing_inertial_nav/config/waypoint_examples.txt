@@ -1,0 +1,142 @@
+# 常用测试路径配置示例
+# 将这些配置复制到 inertial_nav_controller.cpp 的 waypoints_ 定义处
+
+// ==================== 示例1: 正方形路径（边长1米）====================
+/*
+waypoints_.push_back(Waypoint(1.0, 0.0, 0.0));      // 点1: 向前1米
+waypoints_.push_back(Waypoint(1.0, 1.0, M_PI/2));   // 点2: 向左1米，朝向90°
+waypoints_.push_back(Waypoint(0.0, 1.0, M_PI));     // 点3: 向后1米，朝向180°
+waypoints_.push_back(Waypoint(0.0, 0.0, -M_PI/2));  // 点4: 返回原点，朝向-90°
+*/
+
+// ==================== 示例2: 直线往返（2米）=========================
+/*
+waypoints_.push_back(Waypoint(2.0, 0.0, 0.0));      // 向前2米
+waypoints_.push_back(Waypoint(0.0, 0.0, M_PI));     // 返回原点，旋转180°
+*/
+
+// ==================== 示例3: 三角形路径 ============================
+/*
+double side = 1.5;  // 边长1.5米
+waypoints_.push_back(Waypoint(side, 0.0, 0.0));                          // 点1
+waypoints_.push_back(Waypoint(side/2, side*0.866, 2*M_PI/3));           // 点2 (60°)
+waypoints_.push_back(Waypoint(0.0, 0.0, 4*M_PI/3));                     // 点3 (返回)
+*/
+
+// ==================== 示例4: 圆形近似（8个点）========================
+/*
+double radius = 1.0;  // 半径1米
+int num_points = 8;
+for (int i = 0; i < num_points; i++) {
+    double angle = 2 * M_PI * i / num_points;
+    double x = radius * cos(angle);
+    double y = radius * sin(angle);
+    double yaw = angle + M_PI/2;  // 朝向圆心外侧
+    waypoints_.push_back(Waypoint(x, y, yaw));
+}
+*/
+
+// ==================== 示例5: "8"字形路径 ===========================
+/*
+// 第一个圆
+for (int i = 0; i < 8; i++) {
+    double angle = 2 * M_PI * i / 8;
+    double x = 0.8 * cos(angle) + 0.8;
+    double y = 0.8 * sin(angle);
+    waypoints_.push_back(Waypoint(x, y, angle));
+}
+// 第二个圆
+for (int i = 0; i < 8; i++) {
+    double angle = 2 * M_PI * i / 8;
+    double x = 0.8 * cos(angle) - 0.8;
+    double y = 0.8 * sin(angle);
+    waypoints_.push_back(Waypoint(x, y, angle));
+}
+*/
+
+// ==================== 示例6: 之字形路径 ============================
+/*
+double segment_length = 1.0;
+double lateral_offset = 0.5;
+for (int i = 0; i < 5; i++) {
+    double x = i * segment_length;
+    double y = (i % 2 == 0) ? 0.0 : lateral_offset;
+    double yaw = (i % 2 == 0) ? M_PI/4 : -M_PI/4;
+    waypoints_.push_back(Waypoint(x, y, yaw));
+}
+*/
+
+// ==================== 示例7: 螺旋路径 ==============================
+/*
+int num_turns = 2;      // 2圈
+int points_per_turn = 16;
+double max_radius = 1.5;
+
+for (int i = 0; i < num_turns * points_per_turn; i++) {
+    double progress = (double)i / (num_turns * points_per_turn);
+    double angle = 2 * M_PI * progress * num_turns;
+    double radius = max_radius * progress;
+    double x = radius * cos(angle);
+    double y = radius * sin(angle);
+    double yaw = angle + M_PI/2;
+    waypoints_.push_back(Waypoint(x, y, yaw));
+}
+*/
+
+// ==================== 示例8: 矩形巡逻路径 ==========================
+/*
+double width = 2.0;   // 宽度
+double height = 1.5;  // 高度
+
+// 外圈
+waypoints_.push_back(Waypoint(width, 0.0, 0.0));
+waypoints_.push_back(Waypoint(width, height, M_PI/2));
+waypoints_.push_back(Waypoint(0.0, height, M_PI));
+waypoints_.push_back(Waypoint(0.0, 0.0, -M_PI/2));
+
+// 内圈（可选）
+double inner_margin = 0.3;
+waypoints_.push_back(Waypoint(width - inner_margin, inner_margin, 0.0));
+waypoints_.push_back(Waypoint(width - inner_margin, height - inner_margin, M_PI/2));
+waypoints_.push_back(Waypoint(inner_margin, height - inner_margin, M_PI));
+waypoints_.push_back(Waypoint(inner_margin, inner_margin, -M_PI/2));
+*/
+
+// ==================== 示例9: 随机探索路径 ==========================
+/*
+#include <random>
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<> x_dist(-1.5, 1.5);
+std::uniform_real_distribution<> y_dist(-1.5, 1.5);
+std::uniform_real_distribution<> yaw_dist(-M_PI, M_PI);
+
+int num_waypoints = 10;
+for (int i = 0; i < num_waypoints; i++) {
+    waypoints_.push_back(Waypoint(x_dist(gen), y_dist(gen), yaw_dist(gen)));
+}
+*/
+
+// ==================== 示例10: 八字形绕障 ===========================
+/*
+// 模拟绕过两个障碍物
+double obstacle_spacing = 1.5;
+double clearance = 0.4;
+
+// 绕过第一个障碍（左侧）
+waypoints_.push_back(Waypoint(0.5, clearance, M_PI/6));
+waypoints_.push_back(Waypoint(1.0, clearance, 0.0));
+
+// 过渡到第二个障碍
+waypoints_.push_back(Waypoint(1.5, 0.0, -M_PI/6));
+
+// 绕过第二个障碍（右侧）
+waypoints_.push_back(Waypoint(2.0, -clearance, -M_PI/6));
+waypoints_.push_back(Waypoint(2.5, -clearance, 0.0));
+
+// 返回
+waypoints_.push_back(Waypoint(2.5, 0.0, M_PI));
+waypoints_.push_back(Waypoint(0.0, 0.0, M_PI));
+*/
+
+// 选择你需要的路径，取消注释即可！

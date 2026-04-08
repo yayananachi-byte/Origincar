@@ -45,6 +45,15 @@ def generate_launch_description():
             arguments=['0', '0', '0','0', '0','0','base_footprint','gyro_link'],
     )
     
+    # IMU 坐标系静态变换 - IMU 相对于 base_footprint 的偏移
+    # 向后 5.8cm (x=-0.058), 向右 2.5cm (y=-0.025), 向上 13.5cm (z=0.135)
+    base_to_imu = launch_ros.actions.Node(
+            package='tf2_ros', 
+            executable='static_transform_publisher', 
+            name='base_to_imu',
+            arguments=['-0.058', '-0.025', '0.135','0', '0','0','base_footprint','imu_link'],
+    )
+    
     link_to_laser = launch_ros.actions.Node(
             package='tf2_ros', 
             executable='static_transform_publisher', 
@@ -88,6 +97,7 @@ def generate_launch_description():
     ld.add_action(origincar_base)
     ld.add_action(base_to_link)
     ld.add_action(base_to_gyro)
+    ld.add_action(base_to_imu)
     ld.add_action(joint_state_publisher_node)
     ld.add_action(choose_car)
     ld.add_action(rdk_imu_driver_node)
