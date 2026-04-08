@@ -1,0 +1,5 @@
+{
+	"model_file": "/app/dev_ws7_10_16_10/src/race/racing_obstacle_detection_yolo/config/yolov5.bin",
+	"class_num": 1,
+	"cls_names_list": "/app/dev_ws7_10_16_10/src/race/racing_obstacle_detection_yolo/config/obstacles.list"
+}

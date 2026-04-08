@@ -1,0 +1,22 @@
+# 编译产物
+build/
+install/
+log/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.egg-info/
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+
+# ROS 特定
+*.db
+roscore.*.pid
+
+# 大型二进制文件（可选）
+# *.bin
