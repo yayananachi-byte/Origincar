@@ -85,8 +85,31 @@ install(
 
 # Install Python scripts
 install(PROGRAMS
-  scripts/bmi088_imu_driver.py
+  scripts/rdk_imu_driver.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+# Auto-install RDK IMU Python module (rdkimu.so) to system Python path
+# This module is required by rdk_imu_driver.py to communicate with RDK X5 BMI088 IMU
+set(RDK_IMU_MODULE_SRC "/home/sunrise/RacingDev/dev_ws/src/origincar/rdk_imu-library/Py_RDK_IMU/rdkimu.cpython-310-aarch64-linux-gnu.so")
+set(PYTHON_SITE_PACKAGES "/usr/local/lib/python3.10/dist-packages")
+
+if(EXISTS ${RDK_IMU_MODULE_SRC})
+  # Copy during build configuration
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${RDK_IMU_MODULE_SRC}"
+      "${PYTHON_SITE_PACKAGES}/rdkimu.cpython-310-aarch64-linux-gnu.so"
+    RESULT_VARIABLE COPY_RESULT
+  )
+  if(COPY_RESULT EQUAL 0)
+    message(STATUS "✅ RDK IMU module auto-installed to: ${PYTHON_SITE_PACKAGES}")
+  else()
+    message(WARNING "❌ Failed to auto-install RDK IMU module")
+  endif()
+else()
+  message(WARNING "⚠️  RDK IMU module not found at: ${RDK_IMU_MODULE_SRC}")
+  message(WARNING "   Please manually copy it to: ${PYTHON_SITE_PACKAGES}/")
+endif()
 
 ament_package()

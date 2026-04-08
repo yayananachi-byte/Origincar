@@ -6,13 +6,14 @@
 # 支持：阿克曼模式 + 纯图像监控 + IMU 切换 + 里程计重置服务
 #
 # 更新日志:
+# - 2026-04-08: 添加 RDK X5 板载 IMU 支持
+#              新增 --rdk-imu 参数，使用 RDK IMU Module 作为唯一 IMU 数据源
 # - 2026-03-31: 更新 EKF 节点名称为 ekf_filter_node
 #              使用官方 /set_pose topic 方案重置里程计
 #              添加 image_transport 节点清理
 # ============================================
 
 # 参数配置（可通过命令行参数覆盖）
-USE_BMI088=${USE_BMI088:-false}  # 默认使用 MPU6050，设为 true 使用 BMI088
 AKMCAR=${AKMCAR:-false}  # 默认差速模式，设为 true 使用阿克曼模式
 CAMERA_TYPE=${CAMERA_TYPE:-usb}  # 默认 USB 摄像头，可设为 "hobot" 或 "usb_only"
 
@@ -44,10 +45,6 @@ info_msg() {
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --bmi088)
-            USE_BMI088=true
-            shift
-            ;;
         --akmcar)
             AKMCAR=true
             shift
@@ -63,7 +60,6 @@ while [[ $# -gt 0 ]]; do
         *)
             echo -e "${YELLOW}未知参数：$1${NC}"
             echo "可用参数:"
-            echo "  --bmi088        使用 BMI088 IMU（默认 MPU6050）"
             echo "  --akmcar        阿克曼转向模式（默认差速）"
             echo "  --hobot-cam     使用 Hobot 摄像头节点"
             echo "  --usb-only      仅使用 USB 摄像头（无 WebSocket）"
@@ -114,20 +110,16 @@ echo "  正在启动服务..."
 echo "============================================"
 echo ""
 
-# 1. 启动底盘节点（包含 IMU、EKF、TF 等）
+# 1. 启动底盘节点（包含 RDK IMU、EKF 融合、TF 等）
 if [ "$AKMCAR" = true ]; then
     info_msg "启动 Origicar 底盘节点（阿克曼模式）..."
 else
     info_msg "启动 Origicar 底盘节点（差速模式）..."
 fi
 
-if [ "$USE_BMI088" = true ]; then
-    info_msg "使用 BMI088 IMU（I2C 接口）"
-    ros2 launch origincar_base origincar_bringup.launch.py use_bmi088:=true akmcar:=$AKMCAR &
-else
-    info_msg "使用 MPU6050 IMU（下位机串口）"
-    ros2 launch origincar_base origincar_bringup.launch.py use_bmi088:=false akmcar:=$AKMCAR &
-fi
+# 使用 RDK IMU 作为唯一 IMU 数据源，EKF 融合轮式里程计和 IMU
+info_msg "⭐ 使用 RDK X5 板载 IMU + EKF 融合"
+ros2 launch origincar_base origincar_bringup.launch.py akmcar:=$AKMCAR &
 BASE_PID=$!
 sleep 5
 
@@ -157,9 +149,9 @@ else
     info_msg "摄像头节点可能未正常启动，继续其他服务..."
 fi
 
-# 3. 启动 ROSBridge
+# 3. 启动 ROSBridge（使用优化配置）
 info_msg "启动 ROSBridge WebSocket 服务器..."
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
+ros2 launch origincar_base rosbridge_optimized.launch.py &
 ROSBRIDGE_PID=$!
 sleep 3
 
@@ -185,11 +177,8 @@ echo "  - 📹 USB 摄像头：✅ PID $CAMERA_PID"
 echo "  - 🔌 ROSBridge: ✅ PID $ROSBRIDGE_PID (端口 9090)"
 echo ""
 echo "⚙️  系统配置:"
-if [ "$USE_BMI088" = true ]; then
-    echo "  - IMU 类型：BMI088 (I2C 接口)"
-else
-    echo "  - IMU 类型：MPU6050 (下位机串口)"
-fi
+echo "  - IMU 类型：RDK X5 板载 BMI088 (唯一数据源)"
+echo "  - EKF 融合：轮式里程计 + RDK IMU → /odom_combined ⭐"
 if [ "$AKMCAR" = true ]; then
     echo "  - 底盘模式：阿克曼转向"
 else
@@ -220,7 +209,6 @@ echo "  - 订阅上述话题查看数据"
 echo "  - 发布消息到 /set_pose topic 重置 EKF 位姿和 TF"
 echo ""
 echo "💡 高级选项:"
-echo "  - 使用 BMI088 IMU: bash $0 --bmi088"
 echo "  - 阿克曼模式：bash $0 --akmcar"
 echo "  - Hobot 摄像头：bash $0 --hobot-cam"
 echo "  - 仅 USB 摄像头：bash $0 --usb-only"

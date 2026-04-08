@@ -1,5 +1,5 @@
-### ekf config file for BMI088 IMU ###
-# 使用 RDK BMI088 IMU 的配置
+### ekf config file for RDK IMU Module ###
+# 使用 D-Robotics RDK X5 板载 BMI088 IMU 的配置
 ekf_filter_node:
     ros__parameters:
         frequency: 30.0
@@ -20,6 +20,7 @@ ekf_filter_node:
         world_frame: odom_combined
 
         # Sensor inputs
+        # 轮式里程计输入
         odom0: odom
         odom0_config: [true, false, false,
                        false, false, false,
@@ -31,12 +32,13 @@ ekf_filter_node:
         odom0_differential: true
         odom0_relative: false
 
-        # BMI088 IMU input - 使用 I2C 接口的 IMU
+        # RDK IMU input - 使用 RDK X5 板载 BMI088 IMU (I2C 接口)
+        # 话题: /imu/data_raw
         imu0: /imu/data_raw
         imu0_config: [false, false, false,
-                      false, false, true,
+                      false, false, true,      # 使用 yaw 角速度
                       false, false, false,
-                      false, false, true,
+                      false, false, true,      # 使用 yaw 角加速度
                       false, false, false]
         imu0_nodelay: false
         imu0_differential: false

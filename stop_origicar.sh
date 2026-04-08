@@ -3,7 +3,7 @@
 # Origicar ROS2 一键停止脚本（完整版）
 # ============================================
 # 功能：精准终止所有 ROS 节点和服务
-# 包括：底盘节点、IMU 驱动、EKF、里程计重置、摄像头、ROSBridge 等
+# 包括：底盘节点、RDK IMU 驱动、EKF、摄像头、ROSBridge 等
 # ============================================
 
 echo "============================================"
@@ -36,10 +36,9 @@ pkill -f "joint_state_publisher" 2>/dev/null || true
 pkill -f "static_transform_publisher" 2>/dev/null || true
 pkill -f "websocket" 2>/dev/null || true
 pkill -f "rosapi" 2>/dev/null || true
-pkill -f "imu_filter_madgwick" 2>/dev/null || true
+pkill -f "rdk_imu_driver" 2>/dev/null || true  # RDK IMU 驱动
 pkill -f "ekf_node" 2>/dev/null || true
 pkill -f "ekf_filter_node" 2>/dev/null || true
-pkill -f "bmi088_imu_driver" 2>/dev/null || true
 pkill -f "image_transport" 2>/dev/null || true
 
 # 清理 ros2 launch 主进程
@@ -48,7 +47,7 @@ pkill -f "ros2 launch origincar" 2>/dev/null || true
 sleep 2
 
 # 检查是否还有残留进程
-REMAINING=$(ps aux | grep -E "(origincar_base|hobot_usb_cam|rosbridge|ekf_node|ekf_filter|imu_filter)" | grep -v grep | wc -l)
+REMAINING=$(ps aux | grep -E "(origincar_base|hobot_usb_cam|rosbridge|ekf_node|ekf_filter|rdk_imu)" | grep -v grep | wc -l)
 
 if [ $REMAINING -eq 0 ]; then
     echo "✅ 所有服务已完全停止"
@@ -59,7 +58,7 @@ else
     pkill -9 -f "rosbridge_websocket"
     pkill -9 -f "ekf_node"
     pkill -9 -f "ekf_filter_node"
-    pkill -9 -f "imu_filter_madgwick"
+    pkill -9 -f "rdk_imu_driver"
     sleep 1
 fi
 
@@ -73,10 +72,10 @@ echo "============================================"
 echo ""
 echo "📋 已停止的服务:"
 echo "  - 🚗 车辆底盘节点 (origincar_base)"
-echo "  - 🎛️ IMU 驱动 & EKF 融合节点"
+echo "  - 🎛️ RDK IMU 驱动 & EKF 融合节点"
 echo "  - 📹 USB 摄像头节点"
 echo "  - 🔌 ROSBridge WebSocket 服务器"
 echo ""
 echo "💡 提示：如需重新启动，请执行：bash start_origicar.sh"
-echo "     或使用高级选项：bash start_origicar.sh --bmi088 --akmcar"
+echo "     或使用高级选项：bash start_origicar.sh --akmcar"
 echo "============================================"

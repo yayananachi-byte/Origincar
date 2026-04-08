@@ -122,6 +122,9 @@ void origincar_base::Sign_Switch_Callback(const std_msgs::msg::Int32::SharedPtr 
 
 void origincar_base::Publish_ImuSensor()
 {
+    // 注意: IMU 数据现在由 RDK IMU Python 节点发布 (rdk_imu_driver.py)
+    // 此函数已被禁用，避免与 RDK IMU 冲突
+    /*
     sensor_msgs::msg::Imu Imu_Data_Pub;
     Imu_Data_Pub.header.stamp = rclcpp::Node::now();
     Imu_Data_Pub.header.frame_id = gyro_frame_id; 
@@ -144,7 +147,7 @@ void origincar_base::Publish_ImuSensor()
     Imu_Data_Pub.linear_acceleration.z = Mpu6050.linear_acceleration.z;
 
     imu_publisher->publish(Imu_Data_Pub);
-
+    */
 }
 
 void origincar_base::Publish_Odom()
@@ -290,7 +293,7 @@ void origincar_base::Control()
 
         Quaternion_Solution(Mpu6050.angular_velocity.x, Mpu6050.angular_velocity.y, Mpu6050.angular_velocity.z,\
                   Mpu6050.linear_acceleration.x, Mpu6050.linear_acceleration.y, Mpu6050.linear_acceleration.z);
-        Publish_ImuSensor();
+        // Publish_ImuSensor();  // 已禁用：IMU 数据由 RDK IMU Python 节点发布
         Publish_Voltage();
         Publish_Odom();
         rclcpp::spin_some(this->get_node_base_interface());
@@ -327,7 +330,7 @@ origincar_base::origincar_base()
 
   odom_publisher = create_publisher<nav_msgs::msg::Odometry>("odom", 10);
 
-  imu_publisher = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 10);
+  // imu_publisher = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 10);  // 已禁用：由 RDK IMU Python 节点发布
 
   voltage_publisher = create_publisher<std_msgs::msg::Float32>("PowerVoltage", 1);
 
