@@ -1,0 +1,19 @@
+# Racing Image Collect 参数配置
+# 用于图像数据采集节点
+
+racing_image_collect:
+  ros__parameters:
+    # 图像话题配置
+    sub_img_topic: "/image"              # 订阅的图像话题名称（hobot_usb_cam 直接发布压缩格式）
+    
+    # 数据集保存路径
+    track_img_folder: "img_collected/track"        # 赛道检测数据集路径
+    obstacle_img_folder: "img_collected/obstacle"  # 障碍物检测数据集路径
+    
+    # 采集频率
+    fps: 1.0                                # 图片保存速率（帧/秒）
+    
+    # 说明：
+    # - 赛道检测数据集：裁剪图像底部224行 (640×224)
+    # - 障碍物检测数据集：完整图像 (640×480)
+    # - 文件命名：line_follow_XXXX.jpg 和 detection_XXXX.jpg

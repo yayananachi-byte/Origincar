@@ -15,7 +15,7 @@
 
 # 参数配置（可通过命令行参数覆盖）
 AKMCAR=${AKMCAR:-false}  # 默认差速模式，设为 true 使用阿克曼模式
-CAMERA_TYPE=${CAMERA_TYPE:-usb}  # 默认 USB 摄像头，可设为 "hobot" 或 "usb_only"
+CAMERA_TYPE=${CAMERA_TYPE:-compressed}  # 默认压缩图像模式，可设为 "hobot"、"usb_only" 或 "normal"
 
 echo "============================================"
 echo "  🚗 Origicar ROS2 系统启动"
@@ -57,12 +57,17 @@ while [[ $# -gt 0 ]]; do
             CAMERA_TYPE="usb_only"
             shift
             ;;
+        --normal)  # 切换到普通模式（实际上与默认模式相同）
+            CAMERA_TYPE="normal"
+            shift
+            ;;
         *)
             echo -e "${YELLOW}未知参数：$1${NC}"
             echo "可用参数:"
-            echo "  --akmcar        阿克曼转向模式（默认差速）"
-            echo "  --hobot-cam     使用 Hobot 摄像头节点"
-            echo "  --usb-only      仅使用 USB 摄像头（无 WebSocket）"
+            echo "  --akmcar              阿克曼转向模式（默认差速）"
+            echo "  --hobot-cam           使用 Hobot 摄像头节点"
+            echo "  --usb-only            仅使用 USB 摄像头（无 WebSocket）"
+            echo "  --normal              普通模式（与默认模式相同，都发布压缩图像）"
             exit 1
             ;;
     esac
@@ -137,7 +142,11 @@ if [ "$CAMERA_TYPE" = "hobot" ]; then
     ros2 launch origincar_bringup usb_websocket_display.launch.py &
 elif [ "$CAMERA_TYPE" = "usb_only" ]; then
     ros2 launch origincar_bringup usb_camera_only.launch.py &
+elif [ "$CAMERA_TYPE" = "normal" ]; then
+    # 普通模式：使用标准显示（已包含压缩图像 /image）
+    ros2 launch origincar_bringup usb_websocket_display_only.launch.py &
 else
+    # 默认模式：也使用标准显示（hobot_usb_cam 已经发布压缩格式到 /image）
     ros2 launch origincar_bringup usb_websocket_display_only.launch.py &
 fi
 CAMERA_PID=$!
@@ -184,6 +193,7 @@ if [ "$AKMCAR" = true ]; then
 else
     echo "  - 底盘模式：差速驱动"
 fi
+echo "  - 图像模式：压缩模式（hobot_usb_cam 发布到 /image）"
 echo ""
 echo "🌐 ROSBridge 访问地址:"
 echo "  - ws://localhost:9090"
@@ -195,8 +205,7 @@ echo "  - 🚗 /odom_combined (融合里程计) ⭐"
 echo "  - 🚗 /odom (轮式里程计)"
 echo "  - 🚗 /imu/data_raw (IMU 原始数据)"
 echo "  - 🚗 /PowerVoltage (电池电压)"
-echo "  - 📹 /image (摄像头画面)"
-echo "  - 📹 /image_raw (原始图像)"
+echo "  - 📹 /image (摄像头画面 - CompressedImage) ⭐ ← racing_image_collect 订阅此话题"
 echo ""
 echo "🔧 位姿重置:"
 echo "  - 📡 /set_pose (geometry_msgs/PoseWithCovarianceStamped) - 发布到此 topic 重置 EKF 位姿"

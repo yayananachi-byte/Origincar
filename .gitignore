@@ -3,6 +3,9 @@ build/
 install/
 log/
 
+# Collected images (not tracked by git)
+img_collected/
+
 # IDE and editor files
 .vscode/
 .idea/
