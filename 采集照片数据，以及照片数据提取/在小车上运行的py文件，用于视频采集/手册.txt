@@ -1,0 +1,13 @@
+查看详细格式支持：v4l2-ctl -d /dev/video0 --all
+驱动名称
+
+支持的分辨率
+
+帧率范围
+
+当前设置的分辨率/帧率
+
+是否使用 MJPG 或 YUYV
+2.查看设备节点：v4l2-ctl --list-devices
+3.查看分辨率和帧率支持：v4l2-ctl -d /dev/video0 --list-formats-ext
+4.测试相机流（快速验证）它会显示实际采集帧率。ffmpeg -f v4l2 -i /dev/video0 -t 5 -f null -

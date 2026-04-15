@@ -1,0 +1,73 @@
+# -*- coding: utf-8 -*-
+# 固定分辨率录像脚本
+import cv2
+import datetime
+import time
+def main():
+    # 摄像头设备号（0 = 默认）
+    device_index = 0
+    # 自定义分辨率 & FPS
+    WIDTH  = 640
+    HEIGHT = 480
+    FPS    = 30
+    OUTPUT = datetime.datetime.now().strftime("output_%Y%m%d_%H%M%S.avi")   # 也可以写 "output.avi"
+
+    cap = cv2.VideoCapture(device_index)
+    if not cap.isOpened():
+        print("NOOPEN")
+        return
+
+    # 设置分辨率 & FPS
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
+    cap.set(cv2.CAP_PROP_FPS, FPS)
+
+    # 获取实际值（部分摄像头可能不完全支持）
+    ret, frame = cap.read()
+    if not ret or frame is None:
+        print("Not obtained")
+        cap.release()
+        return
+    h, w = frame.shape[:2]
+
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")  # 保存为AVI
+    out = cv2.VideoWriter(OUTPUT, fourcc, FPS, (w, h))
+    if not out.isOpened():
+        print("VideoWriter failed to open")
+        cap.release()
+        return
+
+    print(f"Recording {w}x{h} @ {FPS}fps -> {OUTPUT}, press q or Ctrl+C to stop")
+
+    frame_time = 1.0 / FPS
+
+    try:
+        while True:
+            start = time.time()
+
+            ret, frame = cap.read()
+            if not ret:
+                break
+            out.write(frame)# 写原始分辨率到文件
+            preview = cv2.resize(frame, (160, 120))# 缩小预览窗口
+
+            cv2.imshow("Recording", preview)
+
+            # 控制循环时间，保持恒定FPS
+            elapsed = time.time() - start
+            if elapsed < frame_time:
+                time.sleep(frame_time - elapsed)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    except KeyboardInterrupt:
+        print("stop")
+
+    out.release()
+    cap.release()
+    cv2.destroyAllWindows()
+    print("yes")
+
+if __name__ == "__main__":
+    main()
