@@ -53,13 +53,18 @@ def generate_launch_description():
     # )
 
     # Web display node - visualization only (no DNN inference)
-    web_node = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(get_package_share_directory('websocket') + '/launch/websocket.launch.py'),
-        launch_arguments={
-            'websocket_image_topic': '/image', 
-            'websocket_image_type': 'mjpeg',
-            'websocket_smart_topic': '/none_smart_data'  # Use invalid topic name to disable AI subscription
-        }.items()
+    # 设置 log_level 为 error 以抑制 AI 数据缺失的警告
+    web_node = Node(
+        package='websocket',
+        executable='websocket',
+        output='screen',
+        parameters=[
+            {'image_topic': '/image'},
+            {'image_type': 'mjpeg'},
+            {'only_show_image': True},  # 布尔类型
+            {'smart_topic': ''}  # 空字符串，不订阅任何 AI 话题
+        ],
+        arguments=['--ros-args', '--log-level', 'error']  # 只显示错误，忽略警告
     )
 
     return LaunchDescription(launch_args + [

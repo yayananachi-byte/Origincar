@@ -1,7 +1,8 @@
 # Origicar ROS2 系统节点与话题总览
 
-**生成时间**: 2026-04-08  
-**系统配置**: RDK X5 板载 IMU + EKF 融合 + USB 摄像头 + ROSBridge  
+**生成时间**: 2026-04-14 (最新更新)  
+**上次更新**: 2026-04-08  
+**系统配置**: RDK X5 板载 IMU + EKF 融合 + USB 摄像头 + ROSBridge + 图像压缩中继  
 **启动模式**: 差速驱动模式
 
 ---
@@ -40,7 +41,7 @@
 
 ---
 
-## 🚀 运行中的 ROS2 节点
+## 🚀 运行中的 ROS2 节点 (共 17 个)
 
 ### 1. `/origincar_base` - 底盘控制节点
 **功能**: 底盘驱动、电机控制、轮式里程计计算
@@ -83,7 +84,7 @@
 | **订阅** | `/odom` | `nav_msgs/msg/Odometry` | BEST_EFFORT | ~20 Hz | 轮式里程计输入 |
 | **订阅** | `/imu/data_raw` | `sensor_msgs/msg/Imu` | BEST_EFFORT | ~100 Hz | IMU 数据输入 |
 | **订阅** | `/set_pose` | `geometry_msgs/msg/PoseWithCovarianceStamped` | RELIABLE | - | 位姿重置指令 |
-| **发布** | `/odom_combined` | `nav_msgs/msg/Odometry` | RELIABLE | **~20 Hz** | ⭐ 融合后的里程计 |
+| **发布** | `/odom_combined` | `nav_msgs/msg/Odometry` | RELIABLE | **~30 Hz** ⬆️ | ⭐ 融合后的里程计 |
 | **发布** | `/tf` | `tf2_msgs/msg/TFMessage` | RELIABLE | **~11 Hz** | 融合后的坐标变换 |
 | **发布** | `/diagnostics` | `diagnostic_msgs/msg/DiagnosticArray` | - | **低频** | 诊断信息 |
 
@@ -92,7 +93,7 @@
 - `/toggle` - 切换滤波处理
 - `/set_pose` - 设置初始位姿
 
-**重要**: `/odom_combined` 是系统的主要里程计输出，用于导航和定位。
+**重要**: `/odom_combined` 是系统的主要里程计输出，用于导航和定位。实测频率约 30 Hz。
 
 ---
 
@@ -109,31 +110,38 @@
 
 **图像格式**: Motion-JPEG (MJPEG)  
 **分辨率**: 640x480  
-**实测帧率**: ~24 fps（受硬件编码影响）
+**实测帧率**: ~14 fps（当前实际运行频率）
 
 ---
 
-### 5. `/hobot_codec_decoder` - 硬件解码节点
-**功能**: Hobot 硬件图像解码
+### 5. `/image_relay` - 图像话题中继节点 ⭐ 新增
+**功能**: 使用 topic_tools relay 将 `/image` 复制为 `/image/compressed`
 
 | 类型 | 话题名称 | 消息类型 | QoS | **帧率** | 说明 |
 |------|---------|---------|-----|---------|------|
-| **订阅** | `/image` | `sensor_msgs/msg/CompressedImage` | RELIABLE | ~24 fps | 接收压缩图像 |
-| **发布** | `/hbmem_img` | `hbm_img_msgs/msg/HbmMsg1080P` | BEST_EFFORT | **~24 fps** | 共享内存图像 |
+| **订阅** | `/image` | `sensor_msgs/msg/CompressedImage` | default | ~14 fps | 接收原始压缩图像 |
+| **发布** | `/image/compressed` | `sensor_msgs/msg/CompressedImage` | default | **~14 fps** | 复制的压缩图像话题 |
 
-**特性**: 使用 Hobot X5 硬件编解码器，零拷贝传输
+**特性**: 
+- 零延迟话题复制
+- 不修改图像数据
+- 用于兼容需要 `/image/compressed` 话题的节点（如 racing_image_collect）
 
 ---
 
-### 6. `/hobot_codec_encoder` - 硬件编码节点
-**功能**: Hobot 硬件图像编码
+### 6. `/hobot_codec_decoder` - 硬件解码节点
+**功能**: Hobot 硬件图像解码（从 ROS 到共享内存）
 
 | 类型 | 话题名称 | 消息类型 | QoS | **帧率** | 说明 |
 |------|---------|---------|-----|---------|------|
-| **订阅** | `/hbmem_img` | `hbm_img_msgs/msg/HbmMsg1080P` | BEST_EFFORT | ~24 fps | 共享内存图像 |
-| **发布** | `/image` | `sensor_msgs/msg/CompressedImage` | RELIABLE | **~24 fps** | 发布压缩图像 |
+| **订阅** | `/image` | `sensor_msgs/msg/CompressedImage` | RELIABLE | ~14 fps | 接收压缩图像 |
+| **发布** | `/hbmem_img` | `hbm_img_msgs/msg/HbmMsg1080P` | BEST_EFFORT | **~14 fps** | 共享内存图像 |
 
-**特性**: JPEG 编码，质量 60%，支持零拷贝
+**特性**: 
+- 使用 Hobot X5 硬件解码器
+- JPEG → NV12 格式转换
+- 零拷贝传输优化
+- 供 AI 推理节点使用
 
 ---
 
@@ -142,7 +150,7 @@
 
 | 类型 | 话题名称 | 消息类型 | **帧率** | 说明 |
 |------|---------|---------|---------|------|
-| **订阅** | `/image` | `sensor_msgs/msg/CompressedImage` | ~24 fps | 接收图像用于 Web 显示 |
+| **订阅** | `/image` | `sensor_msgs/msg/CompressedImage` | ~14 fps | 接收图像用于 Web 显示 |
 
 **参数**:
 - `image_topic`: /image
@@ -150,9 +158,33 @@
 - `only_show_image`: 0
 - `smart_topic`: /none_smart_data
 
+**注意**: 当前无 AI 数据发布者，会显示警告信息
+
 ---
 
-### 8. `/joint_state_publisher` - 关节状态发布节点
+### 8. `/image_compressor` - 图像压缩节点 ⭐ 新增
+**功能**: 将未压缩图像转换为 CompressedImage 格式（备用方案）
+
+| 类型 | 话题名称 | 消息类型 | QoS | **帧率** | 说明 |
+|------|---------|---------|-----|---------|------|
+| **订阅** | `/image_raw` | `sensor_msgs/msg/Image` | default | - | 接收未压缩图像 |
+| **发布** | `/image/compressed` | `sensor_msgs/msg/CompressedImage` | default | - | 发布压缩图像 |
+
+**状态**: ⚠️ 当前未使用（`/image_raw` 无发布者）  
+**用途**: 备用方案，当需要从 Image 转换为 CompressedImage 时启用
+
+---
+
+### 9. `/joint_state_publisher` - 关节状态发布节点
+
+| 类型 | 话题名称 | 消息类型 | **帧率** | 说明 |
+|------|---------|---------|---------|------|
+| **订阅** | `/robot_description` | `std_msgs/msg/String` | 单次 | URDF 描述 |
+| **发布** | `/joint_states` | `sensor_msgs/msg/JointState` | **~10 Hz** | 关节状态 |
+
+---
+
+### 9. `/joint_state_publisher` - 关节状态发布节点
 **功能**: 发布机器人关节状态
 
 | 类型 | 话题名称 | 消息类型 | **帧率** | 说明 |
@@ -162,18 +194,7 @@
 
 ---
 
-### 9. `/robot_state_publisher` - 机器人状态发布节点
-**功能**: 根据关节状态发布 TF 变换
-
-| 类型 | 话题名称 | 消息类型 | Durability | **帧率** | 说明 |
-|------|---------|---------|-----------|---------|------|
-| **订阅** | `/joint_states` | `sensor_msgs/msg/JointState` | VOLATILE | ~10 Hz | 关节状态 |
-| **发布** | `/robot_description` | `std_msgs/msg/String` | TRANSIENT_LOCAL | **单次** | URDF 描述 |
-| **发布** | `/tf` | `tf2_msgs/msg/TFMessage` | VOLATILE | **~10 Hz** | 静态 TF 变换 |
-
----
-
-### 10. `/rosbridge_websocket` - ROSBridge WebSocket 服务器
+### 10. `/robot_state_publisher` - 机器人状态发布节点
 **功能**: 提供 WebSocket 接口，允许 Web 客户端访问 ROS2
 
 | 类型 | 话题名称 | 消息类型 | 说明 |
@@ -191,10 +212,25 @@
 
 ---
 
-### 11. `/rosapi` & `/rosapi_params` - ROS API 服务节点
-**功能**: 提供 ROS 系统信息查询服务
+### 11. `/rosbridge_websocket` - ROSBridge WebSocket 服务器
+**功能**: 提供 WebSocket 接口，允许 Web 客户端访问 ROS2
+
+| 类型 | 话题名称 | 消息类型 | 说明 |
+|------|---------|---------|------|
+| **发布** | `/client_count` | `std_msgs/msg/Int32` | 客户端连接数 |
+| **发布** | `/connected_clients` | `rosbridge_msgs/msg/ConnectedClients` | 连接的客户端列表 |
+
+**监听地址**: `ws://0.0.0.0:9090`  
+**外部访问**: `ws://192.168.31.214:9090`
+
+**支持的功能**:
+- Advertise/Publish/Subscribe
+- Call Service/Advertise Service
+- Send Action Goal/Action Feedback/Action Result
 
 ---
+
+### 12. `/rosapi` & `/rosapi_params` - ROS API 服务节点
 
 ## 📡 主要话题详细列表
 
@@ -229,6 +265,7 @@
 - **类型**: `nav_msgs/msg/Odometry`
 - **发布者**: `/ekf_filter_node`
 - **订阅者**: 无（可通过 ROSBridge 订阅）
+- **帧率**: **~30 Hz** ⬆️ (实测)
 - **用途**: **融合里程计**（轮式里程计 + IMU），系统主要里程计输出
 - **QoS**: RELIABLE
 - **重要性**: 导航、定位、建图应使用此话题
@@ -259,15 +296,24 @@
 #### `/image`
 - **类型**: `sensor_msgs/msg/CompressedImage`
 - **发布者**: 
-  - `/hobot_usb_cam` (原始采集)
-  - `/hobot_codec_encoder` (硬件编码后)
+  - `/hobot_usb_cam` (唯一发布者)
 - **订阅者**: 
   - `/hobot_codec_decoder` (硬件解码)
   - `/websocket` (Web 传输)
+  - `/image_relay` (话题中继)
 - **格式**: Motion-JPEG (MJPEG)
 - **分辨率**: 640x480
-- **帧率**: ~30 fps
+- **帧率**: **~14 fps** (当前实测)
 - **用途**: 视频流传输和显示
+
+#### `/image/compressed` ⭐ 新增
+- **类型**: `sensor_msgs/msg/CompressedImage`
+- **发布者**: 
+  - `/image_relay` (从 /image 复制)
+  - `/image_compressor` (备用，当前未使用)
+- **订阅者**: 无（可供 racing_image_collect 等节点订阅）
+- **帧率**: **~14 fps** (与 /image 同步)
+- **用途**: 兼容需要 `/image/compressed` 话题的节点
 
 #### `/camera_info`
 - **类型**: `sensor_msgs/msg/CameraInfo`
@@ -415,13 +461,15 @@ IMU (BMI088) → /imu/data_raw ──┘
 
 ### 图像处理流程
 ```
-USB 摄像头 → hobot_usb_cam → /image (MJPEG)
+USB 摄像头 → hobot_usb_cam → /image (MJPEG, ~14 fps)
                                     ↓
-                          hobot_codec_decoder → /hbmem_img (共享内存)
-                                    ↓
-                          hobot_codec_encoder → /image (MJPEG)
-                                    ↓
-                              websocket → Web 浏览器
+                    ┌───────────────┼───────────────┐
+                    ↓               ↓               ↓
+          image_relay      hobot_codec_decoder   websocket
+          (话题复制)       (JPEG→NV12解码)      (Web传输)
+                    ↓               ↓
+          /image/compressed   /hbmem_img (共享内存)
+          (~14 fps)           (供AI推理使用)
 ```
 
 ### 控制流程
@@ -494,7 +542,18 @@ USB 摄像头 → hobot_usb_cam → /image (MJPEG)
 
 ## 📝 更新日志
 
-- **2026-04-08 (更新)**: 
+- **2026-04-14 (最新)**: 
+  - **新增 `/image_relay` 节点**：使用 topic_tools relay 复制 `/image` 到 `/image/compressed`
+  - **新增 `/image_compressor` 节点**：备用图像压缩方案（当前未使用）
+  - **更新 EKF 频率**：`/odom_combined` 实测 ~30 Hz（从 20 Hz 提升）
+  - **更新图像频率**：`/image` 实测 ~14 fps（受硬件影响）
+  - **优化图像流架构**：
+    - `/hobot_usb_cam` → `/image` (唯一发布者)
+    - `/image_relay` → `/image/compressed` (话题复制，供 racing_image_collect 使用)
+    - `/hobot_codec_decoder` → `/hbmem_img` (AI 推理用)
+  - **移除 hobot_codec_encoder**：简化图像流，避免重复编码
+
+- **2026-04-08 (更新)**:
   - **禁用 hobot_codec_encoder 节点**，简化图像流
   - **统一图像参数**: 640x480 @ 30fps
   - **图像流向优化**: 
@@ -522,10 +581,11 @@ USB 摄像头 → hobot_usb_cam → /image (MJPEG)
 
 | 话题名称 | 帧率 | 消息类型 | 发布者 | 用途 |
 |---------|------|---------|--------|------|
-| `/image` | **~24 fps** | `sensor_msgs/msg/CompressedImage` | `/hobot_usb_cam`, `/hobot_codec_encoder` | MJPEG 压缩图像流 |
-| `/hbmem_img` | **~24 fps** | `hbm_img_msgs/msg/HbmMsg1080P` | `/hobot_codec_decoder` | 共享内存图像（零拷贝） |
+| `/odom_combined` | **~30 Hz** ⬆️ | `nav_msgs/msg/Odometry` | `/ekf_filter_node` | ⭐ 融合里程计（推荐使用） |
+| `/image` | **~14 fps** | `sensor_msgs/msg/CompressedImage` | `/hobot_usb_cam` | MJPEG 压缩图像流 |
+| `/image/compressed` | **~14 fps** ⭐ | `sensor_msgs/msg/CompressedImage` | `/image_relay` | /image 的副本（兼容用） |
+| `/hbmem_img` | **~14 fps** | `hbm_img_msgs/msg/HbmMsg1080P` | `/hobot_codec_decoder` | 共享内存图像（零拷贝） |
 | `/odom` | **~20 Hz** | `nav_msgs/msg/Odometry` | `/origincar_base` | 轮式里程计（EKF 输入） |
-| `/odom_combined` | **~20 Hz** | `nav_msgs/msg/Odometry` | `/ekf_filter_node` | ⭐ 融合里程计（推荐使用） |
 | `/robotpose` | **~18 Hz** | `origincar_msg/msg/Data` | `/origincar_base` | 机器人位姿数据 |
 | `/robotvel` | **~18 Hz** | `origincar_msg/msg/Data` | `/origincar_base` | 机器人速度数据 |
 | `/PowerVoltage` | **~18 Hz** | `std_msgs/msg/Float32` | `/origincar_base` | 电池电压监控 |
@@ -556,24 +616,27 @@ USB 摄像头 → hobot_usb_cam → /image (MJPEG)
 ```
 IMU 数据采集:     BMI088 → /imu/data_raw        ~10ms (100Hz)
 轮式里程计:       编码器 → /odom                ~50ms (20Hz)
-EKF 融合:         /odom + /imu → /odom_combined  ~50ms (20Hz)
-图像采集:         USB Cam → /image              ~42ms (24fps)
-硬件编解码:       /image → /hbmem_img → /image  ~5-10ms
+EKF 融合:         /odom + /imu → /odom_combined  ~33ms (30Hz) ⬆️
+图像采集:         USB Cam → /image              ~71ms (14fps) ⚠️
+话题中继:         /image → /image/compressed    <1ms (零延迟)
+硬件解码:         /image → /hbmem_img           ~5-10ms
 ```
 
 ### 系统负载评估
 
 - **CPU 密集型**: 图像编解码（Hobot 硬件加速）
 - **高频数据**: IMU (100Hz) - 对 CPU 影响小
-- **中频数据**: 里程计融合 (20Hz) - 主要计算负载
-- **网络带宽**: ROSBridge WebSocket (~2-5 Mbps，取决于图像订阅)
+- **中频数据**: 里程计融合 (30Hz) ⬆️ - 主要计算负载
+- **低频数据**: 图像传输 (14fps) ⚠️ - 受硬件限制
+- **网络带宽**: ROSBridge WebSocket (~1-3 Mbps，取决于图像订阅)
 
 ### 优化建议
 
 1. **IMU 数据**: 100Hz 可能过高，如不需要可降低至 50Hz
-2. **图像传输**: 当前 24fps 已足够，可通过调整 JPEG 质量优化带宽
-3. **里程计融合**: 20Hz 是合理值，不建议降低
+2. **图像传输**: 当前 14fps 较低，可尝试调整摄像头参数提升至 20-25fps
+3. **里程计融合**: 30Hz 是理想值，已优化完成 ✅
 4. **TF 变换**: 11Hz 略低，可考虑提升至 20Hz 以提高平滑度
+5. **图像压缩**: 当前 JPEG 质量适中，可根据带宽需求调整
 
 ---
 

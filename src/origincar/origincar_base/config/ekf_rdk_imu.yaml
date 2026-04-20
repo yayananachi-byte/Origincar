@@ -2,7 +2,7 @@
 # 使用 D-Robotics RDK X5 板载 BMI088 IMU 的配置
 ekf_filter_node:
     ros__parameters:
-        frequency: 30.0
+        frequency: 100.0  # 从 30.0 降低到 20.0，与轮式里程计频率一致
         sensor_timeout: 2.0
         two_d_mode: true
         transform_time_offset: 0.0
@@ -35,11 +35,11 @@ ekf_filter_node:
         # RDK IMU input - 使用 RDK X5 板载 BMI088 IMU (I2C 接口)
         # 话题: /imu/data_raw
         imu0: /imu/data_raw
-        imu0_config: [false, false, false,
-                      false, false, true,      # 使用 yaw 角速度
-                      false, false, false,
-                      false, false, true,      # 使用 yaw 角加速度
-                      false, false, false]
+        imu0_config: [false, false, false,    # 不使用位置
+                      false, false, true,      # 使用 yaw 角速度 (gz)
+                      false, false, false,     # 不使用线速度
+                      true,  true,  false,     # 使用 roll/pitch 角速度 (gx, gy)
+                      true,  true,  true]      # 使用三轴线加速度 (ax, ay, az)
         imu0_nodelay: false
         imu0_differential: false
         imu0_relative: true
